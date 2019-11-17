@@ -4,7 +4,7 @@ pub mod sql {
 
     use crate::reporting::reports::SQLQueryReport;
     use crate::reporting::schedulers::SQLQueryReportScheduler;
-    use crate::reporting::schedules::{MonthlyOneTimeReportSchedule, OneTimeReportSchedule};
+    use crate::reporting::schedules::{MonthlyReportSchedule, OneTimeReportSchedule};
     use crate::reporting::util::get_monthly_report_next_run_datetime;
 
     /// An implementation of the `Scheduler` trait for scheduling and executing reports generated
@@ -19,7 +19,7 @@ pub mod sql {
         /// A vector of monthly report schedules.
         /// Contains the report ID and the day, hour and minute when each report should be run at,
         /// every month.
-        monthly_schedules: Vec<MonthlyOneTimeReportSchedule>,
+        monthly_schedules: Vec<MonthlyReportSchedule>,
     }
 
     impl<'a> SQLQueryReportScheduler<'a> for SQLQueryReporter<'a> {
@@ -71,7 +71,7 @@ pub mod sql {
                     match find_existing_schedule_pos_result {
                         Some(_idx) => Err("That report is already scheduled to run.".into()),
                         None => {
-                            let schedule = MonthlyOneTimeReportSchedule {
+                            let schedule = MonthlyReportSchedule {
                                 id,
                                 day,
                                 hour,

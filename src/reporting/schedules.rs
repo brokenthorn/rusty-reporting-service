@@ -2,7 +2,7 @@ use chrono::{DateTime, Local};
 
 /// Represents a report scheduled to be run repeatedly each month, at the specified day,
 /// hour and minute.
-pub struct MonthlyOneTimeReportSchedule {
+pub struct MonthlyReportSchedule {
     pub id: i32,
     pub day: u32,
     pub hour: u32,
