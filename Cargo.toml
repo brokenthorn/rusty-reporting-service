@@ -1,0 +1,18 @@
+[package]
+name = "rusty-reporting-service"
+description = "A reporting service I initially built for Mini-Farm."
+version = "0.1.0"
+readme = "README.md"
+repository = "https://github.com/brokenthorn/rusty-reporting-service"
+authors = ["Paul-Sebastian Manole <brokenthorn@gmail.com>"]
+documentation = "https://docs.rs/rusty-reporting-service/"
+keywords = ["reporting", "service"]
+license = "MIT"
+edition = "2018"
+
+[dependencies]
+tiberius = "0.3.2"
+futures = "0.1.18"
+futures-state-stream = "0.1"
+tokio = "0.1.2"
+chrono = "0.4.0"
