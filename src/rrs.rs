@@ -20,16 +20,21 @@ pub struct SchedulersManager {
     running_handles: Vec<ScheduleHandle>,
 }
 
+impl Default for SchedulersManager {
+    fn default() -> Self {
+        SchedulersManager {
+            schedulers: vec![],
+            running_handles: vec![],
+        }
+    }
+}
+
 impl SchedulersManager {
     pub fn new() -> Self {
         let s = span!(Level::INFO, "SchedulersManager");
         let _guard = s.enter();
         event!(Level::INFO, msg = "New SchedulersManager.");
-
-        SchedulersManager {
-            schedulers: vec![],
-            running_handles: vec![],
-        }
+        SchedulersManager::default()
     }
 
     /// Adds a new scheduler to this manager.
