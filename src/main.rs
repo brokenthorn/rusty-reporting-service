@@ -14,26 +14,42 @@
 //extern crate tokio;
 //extern crate tracing;
 
-use futures::Future;
-use futures_state_stream::StateStream;
-use tiberius::SqlConnection;
-use tokio::executor::current_thread;
-use tracing::{info, span, Level};
+//use futures::Future;
+//use futures_state_stream::StateStream;
+//use tiberius::SqlConnection;
+//use tokio::executor::current_thread;
+
+use tracing::{event, instrument, span, Level};
+use tracing_subscriber::FmtSubscriber;
+
+// Scheduler, and trait for .seconds(), .minutes(), etc.
+use clokwerk::{Scheduler, TimeUnits};
+// Import week days and WeekDay
+use clokwerk::Interval::*;
 
 mod rrs;
 
+#[instrument]
 fn main() {
-    #[derive(Debug)]
-    struct FooStruct<'a> {
-        a: &'a str,
-    }
+    let fmt_subscriber = FmtSubscriber::new();
+    tracing::subscriber::set_global_default(fmt_subscriber)
+        .expect("Setting global default tracing subscriber failed.");
 
-    let mut span = span!(Level::INFO, "Application start up");
-    span.in_scope(|| {
-        info!(target: "application_main_events", "Something has happened in {}!", "main function");
-        let s = FooStruct { a: "bar!" };
-        info!("{:?} got created.", s);
+    event!(Level::INFO, "Application started.");
+
+    let mut manager = rrs::SchedulersManager::new();
+
+    let mut s1 = Scheduler::new();
+
+    s1.every(5.seconds()).run(|| {
+        let span = span!(Level::INFO, "S1 Scheduler");
+        let _guard = span.enter();
+        event!(Level::INFO, "Triggered. Next trigger in 5s.");
     });
+
+    manager.add_scheduler(s1);
+    manager.start();
+    manager.wait();
 
     //    let conn_str = if cfg!(windows) {
     //        "server=tcp:localhost,1433;integratedSecurity=true;TrustServerCertificate=true;".to_owned()
@@ -53,4 +69,6 @@ fn main() {
     //        })
     //    });
     //    current_thread::block_on_all(future).unwrap();
+
+    event!(Level::INFO, "Application exited.");
 }
