@@ -19,32 +19,36 @@
 //use tiberius::SqlConnection;
 //use tokio::executor::current_thread;
 
-use tracing::{event, instrument, span, Level};
-use tracing_subscriber::FmtSubscriber;
-
 // Scheduler, and trait for .seconds(), .minutes(), etc.
 use clokwerk::{Scheduler, TimeUnits};
 // Import week days and WeekDay
-use clokwerk::Interval::*;
+//use clokwerk::Interval::*;
+
+use tracing::{event, span};
+use tracing_core::metadata::Level;
+use tracing_subscriber::FmtSubscriber;
 
 mod rrs;
 
-#[instrument]
 fn main() {
     let fmt_subscriber = FmtSubscriber::new();
     tracing::subscriber::set_global_default(fmt_subscriber)
         .expect("Setting global default tracing subscriber failed.");
 
-    event!(Level::INFO, "Application started.");
+    // The main application tracing span. By default it only traces TRACE level events.
+    let s = span!(Level::INFO, "Main");
+    let _guard = s.enter();
+
+    event!(Level::INFO, msg = "Application started.");
 
     let mut manager = rrs::SchedulersManager::new();
 
     let mut s1 = Scheduler::new();
 
     s1.every(5.seconds()).run(|| {
-        let span = span!(Level::INFO, "S1 Scheduler");
-        let _guard = span.enter();
-        event!(Level::INFO, "Triggered. Next trigger in 5s.");
+        let s = span!(target: "S1_Scheduler", Level::INFO, "S1 Scheduler");
+        let _guard = s.enter();
+        event!(Level::INFO, msg = "Triggered. Next trigger in 5s.");
     });
 
     manager.add_scheduler(s1);
