@@ -69,9 +69,11 @@ impl SimpleManager {
         }
     }
 
-    /// Start a background thread to call `Scheduler::run_pending()` with the specified frequency.
+    /// Start the scheduler by using a background thread to call `Scheduler::run_pending()`
+    /// with the specified frequency.
     ///
-    /// The thread handle is stored in `Self::handle`.
+    /// The thread handle is stored in `Self::handle`. This function does not block. If the thread
+    /// handle goes out of scope, the background thread is terminated successfully.
     pub fn watch_thread(mut self, frequency: Duration) {
         let s = span!(Level::INFO, LOG_SPAN_NAME);
         let _guard = s.enter();
@@ -98,6 +100,7 @@ impl SimpleManager {
         }
     }
 
+    /// Start the scheduler by calling `Scheduler::run_pending()` with the specified frequency.
     pub fn start(&mut self, interval: Duration) {
         let s = span!(Level::INFO, LOG_SPAN_NAME);
         let _guard = s.enter();
