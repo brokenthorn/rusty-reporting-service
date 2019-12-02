@@ -8,8 +8,7 @@ use clokwerk::{Interval, ScheduleHandle, Scheduler};
 use tracing::{event, span};
 use tracing_core::metadata::Level;
 
-/// `&'static str` of the log span name used in this module,
-/// in conjunction with facilities from the `tracing` crate.
+/// Log span name used in this module, in conjunction with facilities from the `tracing` crate.
 pub const LOG_SPAN_NAME: &'static str = "MANAGER";
 
 /// A simple manager for a job scheduler.
