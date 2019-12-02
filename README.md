@@ -1,6 +1,8 @@
-# Rusty Reporting Service
-A reporting service I initially built for Mini-Farm.
-I wrote it while learning Rust, so I called it "rusty". 😉
+# ⏱ Rusty Reporting Service
+A tiny special purpose reporting service built (initially) for Mini-Farm S.R.L.
 
-A lot of gratitude goes out to [@steffengy](https://github.com/steffengy) (Steffen Butzer)
-the creator of the [tiberius](https://github.com/steffengy/tiberius) async MSSQL driver for Rust.
+This is currently a work in progress that I'm writing while learning Rust, so I called it "Rusty". 😉
+
+
+---
+Thanks [@steffengy](https://github.com/steffengy) for creating [tiberius](https://github.com/steffengy/tiberius).
