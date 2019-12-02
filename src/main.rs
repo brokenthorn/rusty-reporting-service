@@ -1,60 +1,49 @@
 //! # ⏱ Rusty Reporting Service
-//! A special purpose reporting service built for Mini-Farm S.R.L.
+//! A tiny special purpose reporting service built for Mini-Farm S.R.L.
 //!
-//! It can schedule tasks that generate reports and execute them at specified time intervals.
-//! It then saves those reports to disk.
-//!
-//! It can also optionally:
-//! * upload reports to FTP/SFTP
-//! * send reports by email as attachments
+//! It schedules and builds reports to be sent via email.
 
-//extern crate futures;
-//extern crate futures_state_stream;
-//extern crate tiberius;
-//extern crate tokio;
-//extern crate tracing;
+use std::time::Duration;
 
-//use futures::Future;
-//use futures_state_stream::StateStream;
-//use tiberius::SqlConnection;
-//use tokio::executor::current_thread;
-
-// Scheduler, and trait for .seconds(), .minutes(), etc.
-use clokwerk::{Scheduler, TimeUnits};
-// Import week days and WeekDay
-//use clokwerk::Interval::*;
-
+use clokwerk::{Interval, TimeUnits};
+use std::thread;
 use tracing::{event, span};
 use tracing_core::metadata::Level;
 use tracing_subscriber::FmtSubscriber;
 
-mod rrs;
+mod manager;
+
+/// `&'static str` of the log span name used in this module,
+/// in conjunction with facilities from the `tracing` crate.
+pub const LOG_SPAN_NAME: &'static str = "MAIN";
 
 fn main() {
     let fmt_subscriber = FmtSubscriber::new();
     tracing::subscriber::set_global_default(fmt_subscriber)
         .expect("Setting global default tracing subscriber failed.");
 
-    // The main application tracing span. By default it only traces TRACE level events.
-    let s = span!(Level::INFO, "Main");
+    let s = span!(Level::INFO, LOG_SPAN_NAME);
     let _guard = s.enter();
+    event!(Level::INFO, msg = "Application starting.");
 
-    event!(Level::INFO, msg = "Application started.");
+    let mut manager = manager::Manager::new();
+    let i: Interval = 1.second();
 
-    let mut manager = rrs::SchedulersManager::new();
-
-    let mut s1 = Scheduler::new();
-
-    s1.every(5.seconds()).run(|| {
-        let s = span!(target: "S1_Scheduler", Level::INFO, "S1 Scheduler");
+    manager.add_task(i, move || {
+        let s = span!(Level::INFO, LOG_SPAN_NAME);
         let _guard = s.enter();
-        event!(Level::INFO, msg = "Triggered. Next trigger in 5s.");
+        // TODO: Here check if current day is day 1 of Month,
+        //  because we want to run once every Month on day 1.
+        event!(Level::INFO, msg = "A job was triggered.")
     });
 
-    manager.add_scheduler(s1);
-    manager.start();
-    manager.wait();
+    manager.start(Duration::from_millis(1000));
 
+    //    use futures::Future;
+    //    use futures_state_stream::StateStream;
+    //    use tiberius::SqlConnection;
+    //    use tokio::executor::current_thread;
+    //
     //    let conn_str = if cfg!(windows) {
     //        "server=tcp:localhost,1433;integratedSecurity=true;TrustServerCertificate=true;".to_owned()
     //    } else {
