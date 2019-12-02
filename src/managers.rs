@@ -1,5 +1,7 @@
-//! # managers module
-//! This module contains only a simple manager for a job scheduler at the moment.
+//! # Job Managers
+//! This module contains job managers.
+//!
+//! Currently, only a simple manager for a job scheduler is available.
 
 use std::thread;
 use std::time::Duration;
@@ -17,39 +19,39 @@ pub const LOG_SPAN_NAME: &'static str = "MANAGER";
 /// You can add jobs to this scheduler, to be run at specified intervals.
 ///
 /// After adding jobs, there are two ways to start scheduling the jobs to be executed.
-/// One is to call [watch_thread], which moves the scheduler to a separate background thread and
+/// One is to call `watch_thread`, which moves the scheduler to a separate background thread and
 /// pools it periodically.
-/// The other way is to call [start], which does the same thing but keeps the scheduler in the main
+/// The other way is to call `start`, which does the same thing, but keeps the scheduler in the main
 /// thread.
-pub struct Manager {
+pub struct SimpleManager {
     /// Job scheduler.
     scheduler: Option<Scheduler>,
 
-    /// Is [Some(ScheduleHandle)] if [Self::scheduler] has not been consumed yet.
-    /// Is [None] if [Self::watch_thread] has been called.
+    /// Is `Some(ScheduleHandle)` if `Self::scheduler` has not been consumed yet.
+    /// Is `None` if `Self::watch_thread` has been called.
     handle: Option<ScheduleHandle>,
 }
 
-impl Default for Manager {
+impl Default for SimpleManager {
     fn default() -> Self {
-        Manager {
+        SimpleManager {
             scheduler: Some(Scheduler::new()),
             handle: None,
         }
     }
 }
 
-impl Manager {
+impl SimpleManager {
     /// Create a new Manager.
     pub fn new() -> Self {
         let s = span!(Level::INFO, LOG_SPAN_NAME);
         let _guard = s.enter();
         event!(Level::INFO, msg = "Creating new Manager.");
-        Manager::default()
+        SimpleManager::default()
     }
 
     /// Add a new job to the scheduler to be run on every given interval.
-    /// For example to run every day use [Interval::Days(1)] or [1.day()] (if using [TimeUnits] trait).
+    /// For example to run every day use `Interval::Days(1)` or `1.day()` (if using `TimeUnits` trait).
     pub fn add_task<F>(&mut self, every_interval: Interval, f: F)
     where
         F: 'static + FnMut() + Sync + Send,
@@ -67,9 +69,9 @@ impl Manager {
         }
     }
 
-    /// Start a background thread to call [Scheduler::run_pending()] with the specified frequency.
+    /// Start a background thread to call `Scheduler::run_pending()` with the specified frequency.
     ///
-    /// The thread handle is stored in [Self::handle].
+    /// The thread handle is stored in `Self::handle`.
     pub fn watch_thread(mut self, frequency: Duration) {
         let s = span!(Level::INFO, LOG_SPAN_NAME);
         let _guard = s.enter();

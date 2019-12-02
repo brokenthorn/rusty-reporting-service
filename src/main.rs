@@ -1,17 +1,16 @@
 //! # ⏱ Rusty Reporting Service
-//! A tiny special purpose reporting service built for Mini-Farm S.R.L.
+//! A tiny special purpose reporting service built initially for Mini-Farm S.R.L.
 //!
 //! It schedules and builds reports to be sent via email.
 
 use std::time::Duration;
 
 use clokwerk::{Interval, TimeUnits};
-use std::thread;
 use tracing::{event, span};
 use tracing_core::metadata::Level;
 use tracing_subscriber::FmtSubscriber;
 
-pub mod manager;
+pub mod managers;
 
 /// Log span name used in this module, in conjunction with facilities from the `tracing` crate.
 pub const LOG_SPAN_NAME: &'static str = "MAIN";
@@ -25,7 +24,7 @@ fn main() {
     let _guard = s.enter();
     event!(Level::INFO, msg = "Application starting.");
 
-    let mut manager = manager::Manager::new();
+    let mut manager = managers::SimpleManager::new();
     let i: Interval = 1.second();
 
     manager.add_task(i, move || {
