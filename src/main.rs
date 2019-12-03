@@ -6,6 +6,10 @@
 use std::time::Duration;
 
 use clokwerk::{Interval, TimeUnits};
+use futures::Future;
+use futures_state_stream::StateStream;
+use tiberius::SqlConnection;
+use tokio::executor::current_thread;
 use tracing::{event, span};
 use tracing_core::metadata::Level;
 use tracing_subscriber::FmtSubscriber;
@@ -32,7 +36,36 @@ fn main() {
         let _guard = s.enter();
         // TODO: Here check if current day is day 1 of Month,
         //  because we want to run once every Month on day 1.
-        event!(Level::INFO, msg = "A job was triggered.")
+        event!(Level::INFO, msg = "A job was triggered.");
+
+        let connection_string = if cfg!(windows) {
+            "server=tcp:10.0.0.140,1433;integratedSecurity=false;TrustServerCertificate=true;"
+                .to_owned()
+        } else {
+            // Get connection string from environment variable:
+            // std::env::var("SQL_SERVER_CONNECTION_STRING").unwrap()
+
+            // Temporary value, used during development and debugging:
+            "server=tcp:10.0.0.140,1433;integratedSecurity=false;TrustServerCertificate=true;username=sa;password=REPLACE_WITH_PASSWORD"
+                .to_owned()
+        };
+
+        let f = SqlConnection::connect(connection_string.as_str()).and_then(|conn| {
+            let s = span!(Level::INFO, LOG_SPAN_NAME);
+            let _guard = s.enter();
+
+            conn.query(
+                "SELECT x FROM (VALUES (1), (2), (3), (4)) numbers(x) WHERE x % @P1 = @P2",
+                &[&2i32, &0i32],
+            )
+            .for_each(|row| {
+                let val: i32 = row.get(0);
+                event!(Level::INFO, msg = "Got value", val);
+                Ok(())
+            })
+        });
+
+        current_thread::block_on_all(f).unwrap();
     });
 
     manager.start(Duration::from_millis(1000));
