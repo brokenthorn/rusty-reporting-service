@@ -25,7 +25,7 @@ pub const LOG_SPAN_NAME: &'static str = "MANAGER";
 /// thread.
 pub struct SimpleManager {
     /// Job scheduler.
-    scheduler: Option<Scheduler>,
+    scheduler: Scheduler,
 
     /// Is `Some(ScheduleHandle)` if `Self::scheduler` has not been consumed yet.
     /// Is `None` if `Self::watch_thread` has been called.
@@ -35,7 +35,7 @@ pub struct SimpleManager {
 impl Default for SimpleManager {
     fn default() -> Self {
         SimpleManager {
-            scheduler: Some(Scheduler::new()),
+            scheduler: Scheduler::new(),
             handle: None,
         }
     }
@@ -59,14 +59,7 @@ impl SimpleManager {
         let s = span!(Level::INFO, LOG_SPAN_NAME);
         let _guard = s.enter();
         event!(Level::INFO, msg = "Adding task.");
-        if let Some(scheduler) = &mut self.scheduler {
-            let _job = scheduler.every(every_interval).run(f);
-        } else {
-            event!(
-                Level::ERROR,
-                msg = "The task cannot be scheduled because the scheduler has been started."
-            );
-        }
+        let _job = &mut self.scheduler.every(every_interval).run(f);
     }
 
     /// Start the scheduler by using a background thread to call `Scheduler::run_pending()`
@@ -88,11 +81,7 @@ impl SimpleManager {
             );
         } else {
             // `handle` is a thread handle that can be used to stop the background watcher thread.
-            self.handle = Some(
-                self.scheduler
-                    .expect("`self.scheduler` should have not been None!")
-                    .watch_thread(frequency),
-            );
+            self.handle = Some(self.scheduler.watch_thread(frequency));
             event!(
                 Level::INFO,
                 msg = "Scheduler is now being watched in a background thread."
@@ -108,16 +97,9 @@ impl SimpleManager {
             Level::INFO,
             msg = "Starting scheduler in the current thread."
         );
-        if let Some(scheduler) = &mut self.scheduler {
-            loop {
-                scheduler.run_pending();
-                thread::sleep(interval);
-            }
-        } else {
-            event!(
-                Level::ERROR,
-                msg = "The scheduler cannot be started because it has been consumed."
-            );
+        loop {
+            &mut self.scheduler.run_pending();
+            thread::sleep(interval);
         }
     }
 }
