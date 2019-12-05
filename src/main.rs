@@ -9,10 +9,11 @@ use clokwerk::{Interval, TimeUnits};
 use futures::Future;
 use futures_state_stream::StateStream;
 use tiberius::SqlConnection;
-use tokio::executor::current_thread;
 use tracing::{event, span};
 use tracing_core::metadata::Level;
 use tracing_subscriber::FmtSubscriber;
+
+use managers::SimpleManager;
 
 pub mod managers;
 
@@ -28,7 +29,14 @@ fn main() {
     let _guard = s.enter();
     event!(Level::INFO, msg = "Application starting.");
 
-    let mut manager = managers::SimpleManager::new();
+    if cfg!(debug_assertions) {
+        event!(
+            Level::WARN,
+            msg = "WARNING! YOU ARE RUNNING A NON-OPTIMIZED DEBUG BUILD!!!"
+        );
+    }
+
+    let mut manager = SimpleManager::new();
     let i: Interval = 1.second();
 
     manager.add_task(i, move || {
@@ -38,61 +46,41 @@ fn main() {
         //  because we want to run once every Month on day 1.
         event!(Level::INFO, msg = "A job was triggered.");
 
-        let connection_string = if cfg!(windows) {
-            "server=tcp:10.0.0.140,1433;integratedSecurity=false;TrustServerCertificate=true;"
-                .to_owned()
+        let mut connection_string: String = String::new();
+
+        if cfg!(debug_assertions) {
+            connection_string.push_str("server=tcp:10.0.0.140,1433;integratedSecurity=false;TrustServerCertificate=true;username=sa;password=REPLACE_WITH_PASSWORD");
+            event!(Level::WARN, msg = "USING A HARD-CODED `SQL_SERVER_CONNECTION_STRING`!");
         } else {
             // Get connection string from environment variable:
-            // std::env::var("SQL_SERVER_CONNECTION_STRING").unwrap()
+            event!(Level::INFO, msg="Using value from `SQL_SERVER_CONNECTION_STRING` environment variable.");
+            connection_string = std::env::var("SQL_SERVER_CONNECTION_STRING").expect("SQL_SERVER_CONNECTION_STRING environment variable is missing!");
+        }
 
-            // Temporary value, used during development and debugging:
-            "server=tcp:10.0.0.140,1433;integratedSecurity=false;TrustServerCertificate=true;username=sa;password=REPLACE_WITH_PASSWORD"
-                .to_owned()
-        };
-
-        let f = SqlConnection::connect(connection_string.as_str()).and_then(|conn| {
+        let sql_future = SqlConnection::connect(connection_string.as_str()).and_then(|conn| {
             let s = span!(Level::INFO, LOG_SPAN_NAME);
             let _guard = s.enter();
 
-            conn.query(
-                "SELECT x FROM (VALUES (1), (2), (3), (4)) numbers(x) WHERE x % @P1 = @P2",
-                &[&2i32, &0i32],
-            )
-            .for_each(|row| {
-                let val: i32 = row.get(0);
-                event!(Level::INFO, msg = "Got value", val);
-                Ok(())
-            })
+            conn
+                .query("SELECT x FROM (VALUES (1), (2), (3), (4)) numbers(x) WHERE x % @P1 = @P2", &[&2i32, &0i32])
+                .for_each(|row| {
+                    let val: i32 = row.get(0);
+                    event!(Level::INFO, msg = "Got value", val);
+                    Ok(())
+                })
+        }).map_err(|e: tiberius::Error| {
+            event!(Level::ERROR, error_msg = format!("{:?}", e).as_str());
         });
 
-        current_thread::block_on_all(f).unwrap();
+        event!(Level::INFO, msg = "Spinning up a Tokio executor on the current thread, to connect to SQL server and run queries.");
+
+        match tokio::runtime::current_thread::block_on_all(sql_future) {
+            Ok(_) => event!(Level::INFO, msg = "Tokio executor finished running all futures successfully."),
+            Err(e) => event!(Level::ERROR, error_msg = format!("Tokio executor terminated with an error: {:?}", e).as_str()),
+        }
     });
 
-    manager.start(Duration::from_millis(1000));
-
-    //    use futures::Future;
-    //    use futures_state_stream::StateStream;
-    //    use tiberius::SqlConnection;
-    //    use tokio::executor::current_thread;
-    //
-    //    let conn_str = if cfg!(windows) {
-    //        "server=tcp:localhost,1433;integratedSecurity=true;TrustServerCertificate=true;".to_owned()
-    //    } else {
-    //        ::std::env::var("TIBERIUS_TEST_CONNECTION_STRING").unwrap()
-    //    };
-    //
-    //    let future = SqlConnection::connect(conn_str.as_str()).and_then(|conn| {
-    //        conn.query(
-    //            "SELECT x FROM (VALUES (1),(2),(3),(4)) numbers(x) WHERE x%@P1=@P2",
-    //            &[&2i32, &0i32],
-    //        )
-    //        .for_each(|row| {
-    //            let val: i32 = row.get(0);
-    //            assert_eq!(val % 2, 0i32);
-    //            Ok(())
-    //        })
-    //    });
-    //    current_thread::block_on_all(future).unwrap();
+    manager.start(Duration::from_millis(2000));
 
     event!(Level::INFO, "Application exited.");
 }
