@@ -37,7 +37,7 @@ fn main() {
     }
 
     let mut manager = SimpleManager::new();
-    let i: Interval = 1.second();
+    let i: Interval = 2.second();
 
     manager.add_task(i, move || {
         let s = span!(Level::INFO, LOG_SPAN_NAME);
@@ -80,7 +80,8 @@ fn main() {
         }
     });
 
-    manager.start(Duration::from_millis(2000));
+    // the interval set here basically sets the fidelity of the task scheduler used within the manager
+    manager.start(Duration::from_millis(100));
 
     event!(Level::INFO, "Application exited.");
 }
