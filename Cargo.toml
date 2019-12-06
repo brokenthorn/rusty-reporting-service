@@ -6,8 +6,8 @@ readme = "README.md"
 repository = "https://github.com/brokenthorn/rusty-reporting-service"
 authors = ["Paul-Sebastian Manole <brokenthorn@gmail.com>"]
 documentation = "https://docs.rs/rusty-reporting-service/"
-keywords = ["reporting", "service"]
-license = "MIT"
+keywords = ["reporting", "service", "sql"]
+license = "MIT/Apache-2.0"
 edition = "2018"
 
 [dependencies]
