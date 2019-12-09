@@ -10,9 +10,6 @@ use clokwerk::{Interval, ScheduleHandle, Scheduler};
 use tracing::{event, span};
 use tracing_core::metadata::Level;
 
-/// Log span name used in this module, in conjunction with facilities from the `tracing` crate.
-pub const LOG_SPAN_NAME: &'static str = "MANAGER";
-
 /// A simple manager for a job scheduler.
 ///
 /// Internally, it contains a scheduler.
@@ -42,9 +39,12 @@ impl Default for SimpleManager {
 }
 
 impl SimpleManager {
+    /// Log span name for events emitted from `SimpleManager`.
+    pub const LOG_SPAN_NAME: &'static str = "SimpleManager";
+
     /// Create a new Manager.
     pub fn new() -> Self {
-        let s = span!(Level::INFO, LOG_SPAN_NAME);
+        let s = span!(Level::INFO, SimpleManager::LOG_SPAN_NAME);
         let _guard = s.enter();
         event!(Level::INFO, msg = "Creating new Manager.");
         SimpleManager::default()
@@ -56,7 +56,7 @@ impl SimpleManager {
     where
         F: 'static + FnMut() + Sync + Send,
     {
-        let s = span!(Level::INFO, LOG_SPAN_NAME);
+        let s = span!(Level::INFO, SimpleManager::LOG_SPAN_NAME);
         let _guard = s.enter();
         event!(Level::INFO, msg = "Adding task.");
         let _job = &mut self.scheduler.every(every_interval).run(f);
@@ -68,7 +68,7 @@ impl SimpleManager {
     /// The thread handle is stored in `Self::handle`. This function does not block. If the thread
     /// handle goes out of scope, the background thread is terminated successfully.
     pub fn watch_thread(mut self, frequency: Duration) {
-        let s = span!(Level::INFO, LOG_SPAN_NAME);
+        let s = span!(Level::INFO, SimpleManager::LOG_SPAN_NAME);
         let _guard = s.enter();
         event!(
             Level::INFO,
@@ -91,7 +91,7 @@ impl SimpleManager {
 
     /// Start the scheduler by calling `Scheduler::run_pending()` with the specified frequency.
     pub fn start(&mut self, interval: Duration) {
-        let s = span!(Level::INFO, LOG_SPAN_NAME);
+        let s = span!(Level::INFO, SimpleManager::LOG_SPAN_NAME);
         let _guard = s.enter();
         event!(
             Level::INFO,

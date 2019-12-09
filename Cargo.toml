@@ -11,6 +11,7 @@ license = "MIT/Apache-2.0"
 edition = "2018"
 
 [dependencies]
+csv = "1.1.1"
 tiberius = "0.3.2"
 futures = "0.1.18"
 futures-state-stream = "0.1"

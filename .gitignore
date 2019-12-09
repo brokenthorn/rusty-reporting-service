@@ -1,3 +1,5 @@
+*.csv
+
 /target
 **/*.rs.bk
 
