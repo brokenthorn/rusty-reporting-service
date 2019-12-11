@@ -1,4 +1,4 @@
-# ⏱ Rusty Reporting Service
+# Rusty Reporting Service ⏰
 
 This is a small, special purpose reporting service I built for my employer during my free time
 spent learning Rust (which is the reason I called it "rusty").
@@ -7,7 +7,7 @@ The service's main purpose is to schedule certain database queries to run
 at specific intervals and then build reports in various formats and share
 them via email or FTP.
 
-## License
+### License
 
 Licensed under either of
 

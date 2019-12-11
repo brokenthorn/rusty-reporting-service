@@ -1,71 +1,45 @@
-//! # ⏱ Rusty Reporting Service
-//! A tiny special purpose reporting service built initially for Mini-Farm S.R.L.
+//! # Rusty Reporting Service (RRS)
 //!
-//! It schedules and builds reports to be sent via email.
+//! A small special purpose reporting service that builds reports periodically on a schedule.
 
 use std::time::Duration;
 
 use clokwerk::{Interval, TimeUnits};
-//use futures::Future;
-//use futures_state_stream::StateStream;
 use tracing::{event, span};
 use tracing_core::metadata::Level;
 use tracing_subscriber::FmtSubscriber;
 
-use managers::SimpleManager;
+use task_managers::SimpleTaskScheduler;
 
-pub mod iqvia_reporting_jobs;
-pub mod managers;
+use crate::tasks::generate_iqvia_pharmacies_report_to_file;
 
-/// Log span name for events emitted from `main()`.
-pub const LOG_SPAN_NAME: &'static str = "main()";
+pub mod bph_reports;
+pub mod task_managers;
+pub mod tasks;
 
 fn main() {
     let fmt_subscriber = FmtSubscriber::new();
+
     tracing::subscriber::set_global_default(fmt_subscriber)
         .expect("Setting global default tracing subscriber failed.");
 
-    let s = span!(Level::INFO, LOG_SPAN_NAME);
+    let s = span!(Level::INFO, "main()");
     let _guard = s.enter();
-    event!(Level::INFO, msg = "Application starting.");
 
     if cfg!(debug_assertions) {
-        event!(
-            Level::WARN,
-            msg = "WARNING! YOU ARE RUNNING A NON-OPTIMIZED DEBUG BUILD!!!"
-        );
+        event!(Level::WARN, "RUNNING A DEBUG BUILD!!!");
     }
 
-    let mut manager = SimpleManager::new();
-    let i: Interval = 5.second();
+    event!(Level::INFO, "Application starting.");
 
-    manager.add_task(i, move || {
-        let s = span!(Level::INFO, "IqviaPharmaciesReportTask");
-        let _guard = s.enter();
-        event!(Level::INFO, msg = "SQL Server Report Job 1 was triggered.");
+    let mut manager = SimpleTaskScheduler::new();
+    let every_day: Interval = 10.second(); // TODO: Change interval to 1.day().
 
-        // TODO: Here check if current day is day 1 of Month,
-        //  because we want to run once every Month on day 1.
-
-        event!(
-            Level::INFO,
-            msg = "Spinning up a Tokio executor on the current thread in order to run SQL query."
-        );
-
-        let sql_future =
-            iqvia_reporting_jobs::iqvia_pharmacies_report("./test-pharmacies-report.csv");
-
-        match tokio::runtime::current_thread::block_on_all(sql_future) {
-            Ok(_result) => event!(
-                Level::INFO,
-                msg = "Tokio executor finished running all futures successfully.",
-            ),
-            Err(err) => event!(
-                Level::ERROR,
-                "Tokio executor finished with an error: {:?}",
-                err
-            ),
-        }
+    manager.add_task(every_day, || {
+        // if chrono::Utc::now().day() != 1 {
+        //     return;
+        // }
+        generate_iqvia_pharmacies_report_to_file(None);
     });
 
     // the interval set here basically sets the fidelity of the task scheduler used within the manager
