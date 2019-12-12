@@ -8,7 +8,7 @@ use futures::prelude::*;
 use futures_state_stream::StateStream;
 use tiberius::query::QueryRow;
 use tiberius::{BoxableIo, SqlConnection};
-use tracing::{event, span};
+use tracing::{error, info, span, warn};
 use tracing_core::metadata::Level;
 
 /// Gets the value of the `BPH_SQL_SERVER_CONNECTION_STRING` env variable.
@@ -16,8 +16,7 @@ use tracing_core::metadata::Level;
 /// __WARNING__: This function will panic if the environment variable can't be retrieved!
 pub fn get_connection_string_from_env() -> String {
     if cfg!(debug_assertions) {
-        event!(
-            Level::WARN,
+        warn!(
             "Using a hard-coded value for `BPH_SQL_SERVER_CONNECTION_STRING` \
              because this is a debugging build!"
         );
@@ -44,7 +43,7 @@ impl IqviaReports {
     ) -> impl Future<Item = SqlConnection<Box<dyn BoxableIo>>, Error = String> + '_ {
         let s = span!(Level::INFO, "generate_pharmacies_report_to_file()");
         let _guard = s.enter();
-        event!(Level::INFO, "Generating report to file {}", filepath);
+        info!("Generating report to file {}", filepath);
 
         let connection_string = get_connection_string_from_env();
 
@@ -74,8 +73,7 @@ impl IqviaReports {
                                 // the column value couldn't be converted to a Rust datatype,
                                 // replace with a generic value denoting such an error occurred:
                                 Err(err) => {
-                                    event!(
-                                        Level::ERROR,
+                                    error!(
                                         "row.try_get::<usize, &str> failed for row={}, col={} with: {:?}",
                                         current_row_idx,
                                         column_idx,
@@ -90,14 +88,14 @@ impl IqviaReports {
                         // write CSV record to disk:
                         match csv_writer.write_record(&csv_record) {
                             Ok(_) => {},
-                            Err(err) => event!(Level::ERROR, "Error writing CSV record: {:?}", err),
+                            Err(err) => error!("Error writing CSV record: {:?}", err),
                         }
 
                         current_row_idx += 1;
                         Ok(())
                     });
 
-                event!(Level::INFO, "Report saved to file {}", filepath);
+                info!("Report saved to file {}", filepath);
                 sql_future
             })
             // stringify tiberius errors:
@@ -105,8 +103,18 @@ impl IqviaReports {
     }
 
     /// Returns a future that generates an IQVIA CAP_IES report saved to a CSV file on disk.
-    pub fn generate_cap_ies_report_to_file(_from_date: &str, _to_date: &str, _filepath: &str) {
-        unimplemented!()
+    pub fn generate_cap_ies_report_to_file(
+        from_datetime: &str,
+        to_datetime: &str,
+        filepath: &str,
+    ) -> impl Future<Item = (), Error = ()> {
+        let s = span!(Level::INFO, "generate_cap_ies_report_to_file()");
+        let _guard = s.enter();
+        info!(
+            "Generating report to file {}, for datetime interval {} - {}.",
+            filepath, from_datetime, to_datetime
+        );
+        futures::future::ok::<(), ()>(())
     }
 
     /// Returns a future that generates an IQVIA POZ_IES report saved to a CSV file on disk.
